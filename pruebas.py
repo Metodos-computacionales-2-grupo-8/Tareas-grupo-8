@@ -1,10 +1,10 @@
-import pandas as pd
+V = 2.54
+angulo = 180
+angulo_60 = 120
+V_60 = V*(angulo_60 / angulo)
 
-data = {'Category': ['A', 'B', 'A', 'C', 'B', 'A'],
-        'Value': [10, 15, 20, 5, 25, 30]}
-df = pd.DataFrame(data)
-
-# Group by 'Category' and calculate the sum of 'Value' for each category
-grouped_data = df.groupby('Category')['Value'].sum()
-
-print(grouped_data)
+V5 = 5
+V5_bits = 1023
+V_60_bits = (V5_bits * V_60) / V5
+print("Voltaje a 60 grados:", V_60 )
+print("Voltaje a 60 grados en bits:", V_60_bits)
