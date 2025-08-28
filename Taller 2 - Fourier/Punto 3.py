@@ -1,6 +1,8 @@
 import numpy as np
 from PIL import Image
+import matplotlib.pyplot as plt
 import os
+from PIL import ImageDraw
 #print("Directorio actual:", os.getcwd())
 
 # ---------------------------
@@ -50,184 +52,146 @@ Image.fromarray(blurred_img_uint8).save("Taller 2 - Fourier/3.a.jpg")
 
 
 
-
+# Análisis y evidencias del espectro (para 3.b.a y 3.b.b)
+# Detecta picos fuertes en el espectro centrado y guarda espectros anotados
 # ---------------------------
 # PARTE B
 # ---------------------------
+def _compute_centered_spectrum(image_path: str) -> tuple[np.ndarray, np.ndarray]:
+    img = Image.open(image_path).convert("L")
+    arr = np.array(img, dtype=np.float64)
+    F = np.fft.fftshift(np.fft.fft2(arr))
+    mag = np.log1p(np.abs(F))
+    return F, mag
+
+def _to_u8(imgf: np.ndarray) -> np.ndarray:
+    mn, mx = float(imgf.min()), float(imgf.max())
+    if mx > mn:
+        imgn = (imgf - mn) / (mx - mn) * 255.0
+    else:
+        imgn = np.zeros_like(imgf)
+    return np.clip(imgn, 0, 255).astype(np.uint8)
+
+def detect_top_peaks(F: np.ndarray, top_k: int = 8, exclude_radius: int = 8, min_dist: int = 6):
+    """
+    Selecciona los top_k picos en magnitud (excluye centro con exclude_radius).
+    Devuelve lista de offsets (dy, dx) relativos al centro (solo un lado).
+    """
+    rows, cols = F.shape
+    cy, cx = rows // 2, cols // 2
+    mag = np.abs(F)
+
+    # Excluir región baja frecuencia alrededor del DC
+    yy, xx = np.ogrid[:rows, :cols]
+    mask_dc = (yy - cy) ** 2 + (xx - cx) ** 2 <= exclude_radius ** 2
+    mag_masked = mag.copy()
+    mag_masked[mask_dc] = 0.0
+
+    # Obtener índices ordenados por magnitud descendente
+    flat_idx = np.argsort(mag_masked.ravel())[::-1]
+    chosen = []
+    chosen_coords = []
+
+    for idx in flat_idx:
+        if len(chosen) >= top_k:
+            break
+        y, x = divmod(int(idx), cols)
+        # evitar cercanía a picos ya seleccionados
+        too_close = False
+        for (py, px) in chosen_coords:
+            if (y - py) ** 2 + (x - px) ** 2 < min_dist ** 2:
+                too_close = True
+                break
+        if too_close:
+            continue
+        # evitar el DC y bordes triviales
+        if mask_dc[y, x]:
+            continue
+        chosen_coords.append((y, x))
+        chosen.append((y - cy, x - cx))
+
+    return chosen
+
+def annotate_and_save_spectrum(F: np.ndarray, mag: np.ndarray, offsets: list[tuple[int, int]], out_path: str):
+    """
+    Guarda espectro log normalizado y una versión anotada (marcando picos y sus conjugados).
+    """
+    mag_u8 = _to_u8(mag)
+    # imagen espectro en RGB para anotación
+    spec_rgb = np.stack([mag_u8, mag_u8, mag_u8], axis=2)
+    img_spec = Image.fromarray(spec_rgb)
+    draw = ImageDraw.Draw(img_spec)
+    rows, cols = mag.shape
+    cy, cx = rows // 2, cols // 2
+
+    # marcar cada pico y su conjugado
+    r = 6
+    for (dy, dx) in offsets:
+        y1, x1 = cy + int(dy), cx + int(dx)
+        y2, x2 = cy - int(dy), cx - int(dx)
+        # círculos rojos
+        draw.ellipse((x1 - r, y1 - r, x1 + r, y1 + r), outline=(255, 0, 0), width=2)
+        draw.ellipse((x2 - r, y2 - r, x2 + r, y2 + r), outline=(255, 0, 0), width=2)
+        # línea al centro (opcional, visual ayuda)
+        draw.line((cx, cy, x1, y1), fill=(255, 0, 0), width=1)
+        draw.line((cx, cy, x2, y2), fill=(255, 0, 0), width=1)
+
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    img_spec.save(out_path)
+    print(f"Espectro anotado guardado en: {out_path}")
+
+# Ejecución inmediata (cuando se corre el script) para generar evidencia:
+if __name__ == "__main__":
+    pruebas = [
+        (r"Taller 2 - Fourier/Imagenes/p_a_t_o.jpg", r"Taller 2 - Fourier/esp_p_a_t_o_espectro_anotado.png", 8),
+        (r"Taller 2 - Fourier/Imagenes/g_a_t_o.png", r"Taller 2 - Fourier/esp_g_a_t_o_espectro_anotado.png", 8),
+    ]
+    for img_path, out_annot, topk in pruebas:
+        if not os.path.exists(img_path):
+            print(f"Advertencia: no se encontró {img_path}, omitiendo.")
+            continue
+        F, mag = _compute_centered_spectrum(img_path)
+        peaks = detect_top_peaks(F, top_k=topk, exclude_radius=10, min_dist=10)
+        print(f"Imagen: {img_path}")
+        print("Picos detectados (dy, dx) relativos al centro) — seleccionar estos pares y sus conjugados para enmascarar:")
+        for p in peaks:
+            print("  ", p)
+        annotate_and_save_spectrum(F, mag, peaks, out_annot)
+    print("Análisis de espectros (evidencias) generado. Revisa los archivos *_espectro_anotado.png")
+
 # -----------------------------------------------------------------------------
 # Utilidades de E/S
 # -----------------------------------------------------------------------------
-def load_grayscale_image(image_path: str) -> np.ndarray:
-    """Carga imagen en gris como float64 con validación de existencia."""
-    if not os.path.exists(image_path):
-        raise FileNotFoundError(f"No se encontró la imagen en la ruta indicada: {image_path}")
-    img = Image.open(image_path).convert("L")
-    return np.array(img, dtype=np.float64)
-
-
-def save_grayscale_image(image_array: np.ndarray, output_path: str) -> None:
-    """Guarda un array 2D como imagen en escala de grises (uint8)."""
-    # Normaliza a [0, 255]
-    arr = image_array
-    arr_min, arr_max = float(arr.min()), float(arr.max())
-    if arr_max > arr_min:
-        arr = (arr - arr_min) / (arr_max - arr_min) * 255.0
-    arr_u8 = np.clip(arr, 0, 255).astype(np.uint8)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    Image.fromarray(arr_u8).save(output_path)
-    print(f"Imagen guardada en: {output_path}")
-
-
-def save_spectrum(Fs: np.ndarray, output_path: str) -> None:
-    """Guarda el espectro (magnitud log) como PNG en escala de grises."""
-    mag = np.log1p(np.abs(Fs))
-    mn, mx = float(mag.min()), float(mag.max())
-    if mx > mn:
-        mag = (mag - mn) / (mx - mn) * 255.0
-    spec_u8 = np.clip(mag, 0, 255).astype(np.uint8)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    Image.fromarray(spec_u8).save(output_path)
-    print(f"Espectro guardado en: {output_path}")
-
-
-# -----------------------------------------------------------------------------
-# FFT helpers
-# -----------------------------------------------------------------------------
-def fft2_centered(image: np.ndarray) -> np.ndarray:
-    F = np.fft.fft2(image)
-    return np.fft.fftshift(F)
-
-
-def ifft2_centered(Fs: np.ndarray) -> np.ndarray:
-    F = np.fft.ifftshift(Fs)
-    img = np.fft.ifft2(F)
-    return np.real(img)
-
-
-# -----------------------------------------------------------------------------
-# Enmascarado de picos (robusto contra bordes)
-# -----------------------------------------------------------------------------
-def zero_peak_region(Fs: np.ndarray, y: int, x: int, radius: int,
-                     soft: bool = False, sigma: float | None = None, strength: float = 1.0) -> None:
-    """
-    Anula (o atenúa suavemente) un disco centrado en (y, x) con radio 'radius' sobre Fs.
-    Trabaja en un recorte local para evitar desajustes de forma cerca de los bordes.
-    """
-    rows, cols = Fs.shape
-    y0 = max(0, y - radius)
-    y1 = min(rows, y + radius + 1)
-    x0 = max(0, x - radius)
-    x1 = min(cols, x + radius + 1)
-
-    if y0 >= y1 or x0 >= x1:
-        return  # completamente fuera
-
-    yy, xx = np.ogrid[y0:y1, x0:x1]
-    mask_local = (yy - y) ** 2 + (xx - x) ** 2 <= radius ** 2
-
-    patch = Fs[y0:y1, x0:x1]
-    if not soft:
-        patch[mask_local] = 0
-    else:
-        # Atenuación tipo notch gaussiano para reducir ringing
-        if sigma is None:
-            sigma = max(1.0, radius / 2.0)
-        g = np.exp(-((yy - y) ** 2 + (xx - x) ** 2) / (2.0 * sigma * sigma))
-        patch[mask_local] = patch[mask_local] * (1.0 - strength * g[mask_local])
-
-    Fs[y0:y1, x0:x1] = patch
-
-
-def remove_peaks(Fs: np.ndarray, offsets: list[tuple[int | float, int | float]],
-                 base_radius: int = 14, soft: bool = False) -> np.ndarray:
-    """
-    Aplica enmascaramiento en pares (dy, dx) y (-dy, -dx) relativos al centro del espectro.
-    Preserva el componente DC.
-    """
-    rows, cols = Fs.shape
+def remove_peaks_and_save(img_path: str, out_path: str, top_k: int = 8, exclude_radius: int = 10, min_dist: int = 10):
+    # Cargar imagen y calcular espectro
+    img = Image.open(img_path).convert("L")
+    arr = np.array(img, dtype=np.float64)
+    F = np.fft.fftshift(np.fft.fft2(arr))
+    peaks = detect_top_peaks(F, top_k=top_k, exclude_radius=exclude_radius, min_dist=min_dist)
+    rows, cols = F.shape
     cy, cx = rows // 2, cols // 2
-    out = Fs.copy()
 
-    for (dy, dx) in offsets:
-        y = cy + int(round(dy))
-        x = cx + int(round(dx))
-        ys = cy - int(round(dy))
-        xs = cx - int(round(dx))
+    # Eliminar picos y sus conjugados
+    for dy, dx in peaks:
+        y1, x1 = cy + int(dy), cx + int(dx)
+        y2, x2 = cy - int(dy), cx - int(dx)
+        F[y1, x1] = 0
+        F[y2, x2] = 0
 
-        # Radio (constante o levemente adaptativo si deseas)
-        radius = int(base_radius)
+    # Reconstruir imagen
+    arr_mod = np.real(np.fft.ifft2(np.fft.ifftshift(F)))
+    arr_mod_u8 = np.clip(arr_mod, 0, 255).astype(np.uint8)
+    Image.fromarray(arr_mod_u8).save(out_path)
+    print(f"Imagen sin interferencia guardada en: {out_path}")
 
-        zero_peak_region(out, y, x, radius, soft=soft)
-        zero_peak_region(out, ys, xs, radius, soft=soft)
-
-    # Preservar DC (brillo global)
-    out[cy, cx] = Fs[cy, cx]
-    return out
-
-
-# -----------------------------------------------------------------------------
-# Pipeline de procesamiento para una imagen
-# -----------------------------------------------------------------------------
-def process_image(image_path: str, output_image_path: str,
-                  manual_offsets: list[tuple[int | float, int | float]],
-                  base_radius: int = 14, soft: bool = False) -> None:
-    """
-    1) Carga imagen en gris
-    2) FFT2 centrada
-    3) Anulación MANUAL de picos en 'manual_offsets' (pares conjugados)
-    4) IFFT y guardado de imagen filtrada
-    5) Guardado de espectro filtrado (mismo nombre + _espectro.png)
-    """
-    # Cargar
-    img = load_grayscale_image(image_path)
-
-    # FFT centrada
-    Fs = fft2_centered(img)
-
-    # Anular picos manualmente
-    Fs_filt = remove_peaks(Fs, manual_offsets, base_radius=base_radius, soft=soft)
-
-    # Reconstrucción
-    img_rec = ifft2_centered(Fs_filt)
-
-    # Guardado de imagen
-    save_grayscale_image(img_rec, output_image_path)
-
-    # Guardado de espectro
-    base, ext = os.path.splitext(output_image_path)
-    spectrum_path = f"{base}_espectro.png"
-    save_spectrum(Fs_filt, spectrum_path)
-
-
-# -----------------------------------------------------------------------------
-# Entradas/salidas del ejercicio 3.b – EJECUCIÓN DIRECTA
-# -----------------------------------------------------------------------------
+# Ejecutar para las dos imágenes de ejemplo
 if __name__ == "__main__":
-    # Directorio de salida
-    out_dir = r"Taller 2 - Fourier"
-    os.makedirs(out_dir, exist_ok=True)
-
-    # 3.b.a – P_a_t_o: picos diagonales (ajustados a patrón típico)
-    pato_path = r"Taller 2 - Fourier/Imagenes/p_a_t_o.jpg"
-    pato_out = os.path.join(out_dir, "3.b.a.jpg")
-    # Offsets manuales relativos al centro (dy, dx)
-    # Pares principales + segundo armónico para robustez
-    pato_offsets = [
-        (40, 40), (-40, 40), (40, -40), (-40, -40),
-        (80, 80), (-80, 80), (80, -80), (-80, -80),
+    pruebas_b = [
+        (r"Taller 2 - Fourier/Imagenes/p_a_t_o.jpg", r"Taller 2 - Fourier/3.b.a.jpg", 8),
+        (r"Taller 2 - Fourier/Imagenes/g_a_t_o.png", r"Taller 2 - Fourier/3.b.b.png", 8),
     ]
-    process_image(pato_path, pato_out, manual_offsets=pato_offsets, base_radius=14, soft=False)
-
-    # 3.b.b – G_a_t_o: patrón tipo “persianas” (vertical y horizontal)
-    gato_path = r"Taller 2 - Fourier/Imagenes/g_a_t_o.png"
-    gato_out = os.path.join(out_dir, "3.b.b.png")
-    # Pares principales (fundamental) en ejes horizontal y vertical + segundo armónico
-    gato_offsets = [
-        (0, 48), (0, -48),   # vertical
-        (48, 0), (-48, 0),   # horizontal
-        (0, 96), (0, -96),   # armónico vertical
-        (96, 0), (-96, 0),   # armónico horizontal
-    ]
-    process_image(gato_path, gato_out, manual_offsets=gato_offsets, base_radius=12, soft=False)
-
-    print("Procesamiento 3.b completado. Revisa las imágenes en:", out_dir)
+    for img_path, out_path, topk in pruebas_b:
+        if not os.path.exists(img_path):
+            print(f"Advertencia: no se encontró {img_path}, omitiendo.")
+            continue
+        remove_peaks_and_save(img_path, out_path, top_k=topk, exclude_radius=10, min_dist=10)
