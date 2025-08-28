@@ -24,7 +24,7 @@ def generate_data(tmax,dt,A,freq,noise):
     return ts, np.random.normal(loc=A*np.sin(2*np.pi*ts*freq),scale=noise)
 
 # Parámetros de la señal
-tmax = 1      # duración total en segundos
+tmax = 2      # duración total en segundos
 dt = 0.001    # intervalo de muestreo en segundos
 A = 1         # amplitud
 freq = 5      # frecuencia de la señal en Hz
@@ -186,13 +186,81 @@ def generate_data(tmax, dt, A, freq, noise, sampling_noise=0):
     # Agrega ruido gaussiano a la señal medida
     measured_signal = np.random.normal(loc=signal, scale=noise)
     # Retorna los tiempos perturbados y la señal medida
-    return ts_perturbed, measured_signal
+    return ts_perturbed,measured_signal
+    # Calcular los valores de sampling_noise para los porcentajes deseados
 
+desired_percentages = [0.2, 1, 10, 20, 30]  # Porcentajes deseados
+dt_mean = dt  # El intervalo de muestreo nominal
+
+sampling_noise_values = [(pct / 100) * dt_mean for pct in desired_percentages]
+
+    # Preparar la figura combinada: 2 columnas (tiempo, frecuencia), 5 filas (niveles de ruido)
+fig, axes = plt.subplots(len(sampling_noise_values), 2, figsize=(12, 12))
+fig.subplots_adjust(hspace=0.4)
+
+for i, sn in enumerate(sampling_noise_values):
+    t_perturbed, y_perturbed = generate_data(tmax, dt, A, freq, noise, sampling_noise=sn)
+    spectrum_perturbed = FourierTransform(t_perturbed, y_perturbed, freqs)
+    mean_sampling_time = np.mean(np.diff(t_perturbed))
+    sampling_noise_std_pct = (np.std(np.diff(t_perturbed)) / mean_sampling_time) * 100
+
+    # Dominio del tiempo (izquierda)
+    ax_time = axes[i, 0]
+    ax_time.plot(t_perturbed, y_perturbed, marker='.', linestyle='None', alpha=0.7)
+    ax_time.set_xlabel('Tiempo (s)')
+    ax_time.set_ylabel('Señal')
+    ax_time.set_title(f'Time domain\nNoise std = {sampling_noise_std_pct:.2f}% of mean dt')
+    ax_time.grid(True)
+
+    # Dominio de la frecuencia (derecha)
+    ax_freq = axes[i, 1]
+    ax_freq.plot(freqs, np.abs(spectrum_perturbed))
+    ax_freq.set_xlabel('Frecuencia (Hz)')
+    ax_freq.set_ylabel('Magnitud')
+    ax_freq.set_title(f'Frequency domain\nNoise std = {sampling_noise_std_pct:.2f}% of mean dt')
+    ax_freq.grid(True)
+
+    #fig.suptitle('Efecto del ruido en el muestreo: tiempo (izq) vs frecuencia (der)', fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.97])
+    plt.savefig("Taller 2 - Fourier/1.d_combined.pdf", bbox_inches="tight", pad_inches=0.1)
+    #plt.show()
+
+"""    
 # Definir varios valores de sampling_noise para analizar su efecto
 sampling_noise_values = [0, 0.0005, 0.001, 0.002, 0.005, 0.01]  # Diferentes niveles de ruido en el muestreo
 
 plt.figure(figsize=(10, 6))  # Crea una figura para graficar los espectros
+for sn in sampling_noise_values:
+    # Genera datos con el nivel de ruido de muestreo actual
+    t_perturbed, y_perturbed = generate_data(tmax, dt, A, freq, noise, sampling_noise=sn)
+    # Calcula la transformada de Fourier usando los tiempos perturbados
+    spectrum_perturbed = FourierTransform(t_perturbed, y_perturbed, freqs)
+    
+    # Calcular el porcentaje de std de sampling_noise respecto al tiempo de muestreo medio
+    mean_sampling_time = np.mean(np.diff(t_perturbed))
+    sampling_noise_std_pct = (np.std(np.diff(t_perturbed)) / mean_sampling_time) * 100
 
+    # Gráfica en el dominio del tiempo
+    plt.figure(figsize=(7, 3))
+    plt.plot(t_perturbed, y_perturbed, marker='.', linestyle='None', alpha=0.7)
+    plt.xlabel('Tiempo (s)')
+    plt.ylabel('Señal')
+    plt.title(f'Time domain (sampling_noise={sn})\nSampling noise std = {sampling_noise_std_pct:.2f}% of mean dt')
+    plt.grid(True)
+    plt.savefig(f"Taller 2 - Fourier/1.d_time_sn_{sn}.pdf", bbox_inches="tight", pad_inches=0.1)
+    #plt.show()
+
+    # Gráfica en el dominio de las frecuencias
+    plt.figure(figsize=(7, 3))
+    plt.plot(freqs, np.abs(spectrum_perturbed))
+    plt.xlabel('Frecuencia (Hz)')
+    plt.ylabel('Magnitud')
+    plt.title(f'Frequency domain (sampling_noise={sn})\nSampling noise std = {sampling_noise_std_pct:.2f}% of mean dt')
+    plt.grid(True)
+    plt.savefig(f"Taller 2 - Fourier/1.d_freq_sn_{sn}.pdf", bbox_inches="tight", pad_inches=0.1)
+    #plt.show()"""
+
+"""    
 for sn in sampling_noise_values:
     # Genera datos con el nivel de ruido de muestreo actual
     t_perturbed, y_perturbed = generate_data(tmax, dt, A, freq, noise, sampling_noise=sn)
@@ -211,4 +279,4 @@ plt.title('Efecto del ruido en el muestreo sobre el espectro de Fourier')  # Tí
 plt.legend()                   # Muestra la leyenda para identificar cada curva
 plt.grid(True)                 # Agrega una cuadrícula al gráfico
 plt.savefig("Taller 2 - Fourier/1.d.pdf", bbox_inches="tight", pad_inches=0.1)  # Guarda el gráfico en un archivo PDF
-#plt.show()                    # Muestra el gráfico en pantalla (comentado para guardar solo el PDF)
+#plt.show()                    # Muestra el gráfico en pantalla (comentado para guardar solo el PDF)"""
