@@ -80,7 +80,7 @@ axs_a[2].set_xlabel('t')
 fig_a.tight_layout()
 fig_a.savefig('Taller 3 - ODE/1.a.pdf', dpi=200)
 
-# ...existing code...
+
 # ############################
 # # 1.b Problema de Landau (bloque reemplazado según la imagen corregida)
 # ############################
@@ -163,7 +163,7 @@ axs_b[1].plot(t_arr_b, y_b, '-g')
 axs_b[1].set_ylabel('y(t)')
 # # Grafico Pi_y(t).
 axs_b[2].plot(t_arr_b, Pi_y, '-m')
-#axs_b[2].ylim(np.min(Pi_y)*1.1, np.max(Pi_y)*1.1)
+#axs_b[2].set_ylim(np.min(Pi_y) * 3, np.max(Pi_y) * 3)
 # # Etiqueta eje vertical.
 axs_b[2].set_ylabel('Pi_y(t)')
 
@@ -176,7 +176,7 @@ axs_b[3].set_xlabel('t')
 # # Ajusto layout para evitar solapamiento y guardo la figura en PDF.
 fig_b.tight_layout()
 fig_b.savefig('Taller 3 - ODE/1.b.pdf', dpi=200)
-# ...existing code...
+
 
 # ############################
 # # 1.c Sistema binario (dos masas iguales m)

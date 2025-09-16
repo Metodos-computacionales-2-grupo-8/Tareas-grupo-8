@@ -111,7 +111,7 @@ for idx in min_idx:                                         # para cada índice 
 
     refined_solutions.append((xs, psi, phi))                # guarda la solución normalizada # noqa: E261
 
-# ...existing code...
+
 # ordenar niveles numéricos por energía (ascendente) para emparejarlos correctamente
 sorted_idx = np.argsort(refined_energies)                              # índices que ordenan refined_energies
 refined_energies = [refined_energies[i] for i in sorted_idx]           # energies ordenadas
@@ -148,7 +148,7 @@ with open(out_fname, "w") as f:
 
 
 
-# ...existing code...
+
 # Graficar potencial y funciones de onda normalizadas (interpoladas en todo x_plot)
 plt.figure(figsize=(8, 8))                                  # crea figura cuadrada para la gráfica final
 x_plot = np.linspace(0.0, 20.0, 2000)                       # dominio para dibujar potencial y ondas
@@ -196,4 +196,3 @@ plt.legend(loc='upper right')   # mostrará solo la entrada 'Morse potential'
 plt.tight_layout()
 plt.savefig("Taller 3 - ODE/3.pdf", dpi=300)
 #plt.show()
-# ...existing code...
