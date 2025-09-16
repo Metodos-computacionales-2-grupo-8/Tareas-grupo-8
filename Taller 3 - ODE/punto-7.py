@@ -104,7 +104,7 @@ if __name__ == "__main__":
         results.append((n, x_star, mass_like, rho_ratio))
 
     # Exportamos a 7.csv con el formato pedido
-    out_path = "7.csv"
+    out_path = "Taller 3 - ODE/7.csv"
     with open(out_path, mode="w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["Indice n", "Radio", "Masa", "rho_c/<rho>"])

@@ -114,6 +114,6 @@ plt.title('Viga de Timoshenko–Ehrenfest: antes y después (6.pdf)')
 plt.legend(loc='best')
 plt.grid(True, alpha=0.25)
 plt.tight_layout()
-plt.savefig('6.pdf', dpi=300)
+plt.savefig('Taller 3 - ODE/6.pdf', dpi=300)
 
 print("Generado: 6.pdf")

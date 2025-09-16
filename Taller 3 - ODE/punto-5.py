@@ -17,8 +17,8 @@ from scipy.integrate import solve_ivp               # integrador de ODE eficient
 # ----------------------------
 # 1) Parámetros de la simulación
 # ----------------------------
-N_ALPHA = 1000                               # cantidad de muestras de alpha (log-espaciadas); aumentar si quieres más resolución
-N_BETA  = 1000                               # cantidad de muestras de beta  (log-espaciadas); aumentar si quieres más resolución
+N_ALPHA = 100                          # cantidad de muestras de alpha (log-espaciadas); aumentar si quieres más resolución
+N_BETA  = 100                            # cantidad de muestras de beta  (log-espaciadas); aumentar si quieres más resolución
 
 ALPHA_MIN, ALPHA_MAX = 1.0, 1e5           # rango de alpha
 BETA_MIN,  BETA_MAX  = 1.0, 1e2           # rango de beta
@@ -146,5 +146,5 @@ cbar = plt.colorbar(pc)
 cbar.set_label(r'log$_{10}$(amplitud de $p_3$)')
 
 plt.tight_layout()
-plt.savefig("5.pdf", dpi=300)
+plt.savefig("Taller 3 - ODE/5.pdf", dpi=300)
 print("punto-5.pdf")
