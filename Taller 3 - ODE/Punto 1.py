@@ -1,12 +1,6 @@
-# # Script que resuelve los incisos 1.a (Lotka-Volterra), 1.b (Problema de Landau) y 1.c (Sistema binario)
-# # Cada sección está separada por comentarios con hashtags para facilitar su uso.
-# # Se generan y guardan 1.a.pdf, 1.b.pdf y 1.c.pdf con los subplots pedidos.
-# # Importo numpy para cálculos numéricos.
 import numpy as np
-# # Importo matplotlib para graficar y guardar las figuras.
 import matplotlib.pyplot as plt
-# # Importo solve_ivp de scipy para integrar sistemas ODE (usado en Landau).
-from scipy.integrate import solve_ivp
+from scipy.integrate import solve_ivp  # Importo solve_ivp de scipy para integrar sistemas ODE (usado en Landau).
 
 # ############################
 # # 1.a Sistema depredador-presa (Lotka-Volterra)
@@ -267,6 +261,4 @@ axs_c[2].set_xlabel('t')
 fig_c.tight_layout()
 fig_c.savefig('Taller 3 - ODE/1.c.pdf', dpi=200)
 
-
-# # Impresión breve indicando que los archivos se generaron (útil en el terminal integrado de VS Code).
 print("Generados: 1.a.pdf, 1.b.pdf, 1.c.pdf")

@@ -1,115 +1,115 @@
-import numpy as np                                      # importa numpy para cálculo numérico eficiente # noqa: E261
-import matplotlib.pyplot as plt                         # importa matplotlib para graficar resultados # noqa: E261
-from scipy.signal import argrelextrema                  # importa herramienta para detectar mínimos locales # noqa: E261
-from scipy.optimize import minimize_scalar              # importa optimizador para refinar energías (bracketing) # noqa: E261
-from scipy.integrate import simpson as simps                        # importa integrador numérico para normalización # noqa: E261
+import numpy as np                                      
+import matplotlib.pyplot as plt                         
+from scipy.signal import argrelextrema                  # importa herramienta para detectar mínimos locales  
+from scipy.optimize import minimize_scalar              # importa optimizador para refinar energías (bracketing)  
+from scipy.integrate import simpson as simps                        # importa integrador numérico para normalización  
 
 # Parámetros físicos y del potencial -----------------------------------------
-hbar = 0.1                                             # constante reducida (unidades dadas en el enunciado) # noqa: E261
-a = 0.8                                                # parámetro a del potencial de Morse # noqa: E261
-x0 = 10.0                                              # posición del mínimo del pozo de Morse # noqa: E261
+hbar = 0.1                                             # constante reducida (unidades dadas en el enunciado)  
+a = 0.8                                                # parámetro a del potencial de Morse  
+x0 = 10.0                                              # posición del mínimo del pozo de Morse  
 
 # Potencial de Morse corregido (exponente positivo) --------------------------------
-def V(x):                                              # función potencial de Morse en x (acepta arrays) # noqa: E261
+def V(x):                                              # función potencial de Morse en x (acepta arrays)  
     # Uso del exponente con signo POSITIVO aquí intencionalmente:
     # exp(a*(x-x0)) -> 0 para x << x0 (izquierda) y -> +inf para x >> x0 (derecha).
     # Esto sitúa el mínimo en x0 y hace que el pozo tenga asintota 0 hacia la izquierda,
     # reproduciendo la forma mostrada en la imagen de referencia.
-    exp_term = np.exp(a * (x - x0))                    # término exponencial con signo positivo # noqa: E261
-    return (1.0 - exp_term)**2 - 1.0                    # V(x) = (1 - e^{a(x-x0)})^2 - 1 (orientación corregida) # noqa: E261
+    exp_term = np.exp(a * (x - x0))                    # término exponencial con signo positivo  
+    return (1.0 - exp_term)**2 - 1.0                    # V(x) = (1 - e^{a(x-x0)})^2 - 1 (orientación corregida)  
 
 # Sistema de ecuaciones de primer orden para Schrödinger -----------------------
 # y = [psi, phi] con psi' = phi, phi' = (V(x)-eps)/hbar^2 * psi
-def derivs(x, y, eps):                                 # devuelve derivadas en x para estado y y energía eps # noqa: E261
-    psi, phi = y                                       # desempaqueta valores actuales de psi y phi # noqa: E261
-    dpsi = phi                                         # psi' = phi # noqa: E261
-    dphi = (V(x) - eps) * psi / (hbar**2)             # phi' = (V - eps)/hbar^2 * psi # noqa: E261
-    return np.array([dpsi, dphi], dtype=float)        # retorna vector derivadas # noqa: E261
+def derivs(x, y, eps):                                 # devuelve derivadas en x para estado y y energía eps  
+    psi, phi = y                                       # desempaqueta valores actuales de psi y phi  
+    dpsi = phi                                         # psi' = phi  
+    dphi = (V(x) - eps) * psi / (hbar**2)             # phi' = (V - eps)/hbar^2 * psi  
+    return np.array([dpsi, dphi], dtype=float)        # retorna vector derivadas  
 
 # Integrador RK4 para el sistema de primer orden --------------------------------
-def integrate_rk4(eps, x_start, x_end, dx):            # integra desde x_start hasta x_end con paso dx # noqa: E261
-    n_steps = int(np.ceil(abs(x_end - x_start) / dx))  # número de pasos redondeado hacia arriba # noqa: E261
-    xs = x_start + np.arange(n_steps + 1) * np.sign(x_end - x_start) * dx  # vector de nodos # noqa: E261
-    ys = np.zeros((n_steps + 1, 2), dtype=float)       # arreglo para psi y phi en cada nodo # noqa: E261
-    ys[0, 0] = 0.0                                     # condición inicial psi(x_start)=0 (sugerido) # noqa: E261
-    ys[0, 1] = 1e-6                                    # condición inicial psi'(x_start) pequeña no nula # noqa: E261
-    for i in range(n_steps):                           # bucle de integración RK4 # noqa: E261
-        x_i = xs[i]                                    # posición actual # noqa: E261
-        y_i = ys[i].copy()                             # estado actual [psi,phi] # noqa: E261
-        k1 = derivs(x_i, y_i, eps)                     # k1 para RK4 # noqa: E261
-        k2 = derivs(x_i + 0.5 * dx * np.sign(x_end - x_start), y_i + 0.5 * dx * k1 * np.sign(x_end - x_start), eps)  # k2 # noqa: E501
-        k3 = derivs(x_i + 0.5 * dx * np.sign(x_end - x_start), y_i + 0.5 * dx * k2 * np.sign(x_end - x_start), eps)  # k3 # noqa: E501
-        k4 = derivs(x_i + dx * np.sign(x_end - x_start), y_i + dx * k3 * np.sign(x_end - x_start), eps)  # k4 # noqa: E261
-        ys[i + 1] = y_i + (dx * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0) * np.sign(x_end - x_start)  # actualización RK4 # noqa: E501
-    return xs, ys[:, 0], ys[:, 1]                     # retorna xs, psi(xs) y phi(xs) # noqa: E261
+def integrate_rk4(eps, x_start, x_end, dx):            # integra desde x_start hasta x_end con paso dx  
+    n_steps = int(np.ceil(abs(x_end - x_start) / dx))  # número de pasos redondeado hacia arriba  
+    xs = x_start + np.arange(n_steps + 1) * np.sign(x_end - x_start) * dx  # vector de nodos  
+    ys = np.zeros((n_steps + 1, 2), dtype=float)       # arreglo para psi y phi en cada nodo  
+    ys[0, 0] = 0.0                                     # condición inicial psi(x_start)=0 (sugerido)  
+    ys[0, 1] = 1e-6                                    # condición inicial psi'(x_start) pequeña no nula  
+    for i in range(n_steps):                           # bucle de integración RK4  
+        x_i = xs[i]                                    # posición actual  
+        y_i = ys[i].copy()                             # estado actual [psi,phi]  
+        k1 = derivs(x_i, y_i, eps)                     # k1 para RK4  
+        k2 = derivs(x_i + 0.5 * dx * np.sign(x_end - x_start), y_i + 0.5 * dx * k1 * np.sign(x_end - x_start), eps)  # k2  
+        k3 = derivs(x_i + 0.5 * dx * np.sign(x_end - x_start), y_i + 0.5 * dx * k2 * np.sign(x_end - x_start), eps)  # k3  
+        k4 = derivs(x_i + dx * np.sign(x_end - x_start), y_i + dx * k3 * np.sign(x_end - x_start), eps)  # k4  
+        ys[i + 1] = y_i + (dx * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0) * np.sign(x_end - x_start)  # actualización RK4  
+    return xs, ys[:, 0], ys[:, 1]                     # retorna xs, psi(xs) y phi(xs)  
 
 # Encontrar puntos de giro V(x)=eps por búsqueda de cambios de signo ----------------
-def find_turning_points(eps, x_min=0.0, x_max=20.0, dx_search=0.001):  # busca x1,x2 tales que V(x)=eps # noqa: E261
-    xs = np.arange(x_min, x_max + dx_search, dx_search)                # malla fina para detectar raíces # noqa: E261
-    vals = V(xs) - eps                                                 # valores de V-eps en la malla # noqa: E261
-    signs = np.sign(vals)                                              # signo de cada punto # noqa: E261
-    changes = np.where(np.diff(signs) != 0)[0]                         # índices donde cambia el signo => raíz entre nodos # noqa: E261
-    if len(changes) >= 2:                                               # si hay al menos dos cruces # noqa: E261
-        # localizar de forma más precisa con interpolación lineal simple # noqa: E261
-        x_left_idx = changes[0]                                        # índice del primer cambio de signo # noqa: E261
-        x_right_idx = changes[-1]                                      # índice del último cambio de signo # noqa: E261
-        # interpolación lineal para estimar posiciones de giro # noqa: E261
-        x1 = xs[x_left_idx] - vals[x_left_idx] * (xs[x_left_idx+1]-xs[x_left_idx])/(vals[x_left_idx+1]-vals[x_left_idx])  # noqa: E501
-        x2 = xs[x_right_idx] - vals[x_right_idx] * (xs[x_right_idx+1]-xs[x_right_idx])/(vals[x_right_idx+1]-vals[x_right_idx])  # noqa: E501
-        return max(x_min, x1), min(x_max, x2)                         # retorna x1,x2 acotados al dominio # noqa: E261
+def find_turning_points(eps, x_min=0.0, x_max=20.0, dx_search=0.001):  # busca x1,x2 tales que V(x)=eps  
+    xs = np.arange(x_min, x_max + dx_search, dx_search)                # malla fina para detectar raíces  
+    vals = V(xs) - eps                                                 # valores de V-eps en la malla  
+    signs = np.sign(vals)                                              # signo de cada punto  
+    changes = np.where(np.diff(signs) != 0)[0]                         # índices donde cambia el signo => raíz entre nodos  
+    if len(changes) >= 2:                                               # si hay al menos dos cruces  
+        # localizar de forma más precisa con interpolación lineal simple  
+        x_left_idx = changes[0]                                        # índice del primer cambio de signo  
+        x_right_idx = changes[-1]                                      # índice del último cambio de signo  
+        # interpolación lineal para estimar posiciones de giro  
+        x1 = xs[x_left_idx] - vals[x_left_idx] * (xs[x_left_idx+1]-xs[x_left_idx])/(vals[x_left_idx+1]-vals[x_left_idx])   
+        x2 = xs[x_right_idx] - vals[x_right_idx] * (xs[x_right_idx+1]-xs[x_right_idx])/(vals[x_right_idx+1]-vals[x_right_idx])   
+        return max(x_min, x1), min(x_max, x2)                         # retorna x1,x2 acotados al dominio  
     else:
-        return x_min, x_max                                             # si no se detectan, usar extremos sugeridos # noqa: E261
+        return x_min, x_max                                             # si no se detectan, usar extremos sugeridos  
 
 # Función objetivo usada en shooting: norma del vector estado al final ----------------
-def endpoint_norm(eps, x_start, x_end, dx):                  # calcula norma final para una energía eps # noqa: E261
-    xs, psi, phi = integrate_rk4(eps, x_start, x_end, dx)    # integra ecuación de Schrödinger # noqa: E261
-    return np.sqrt(psi[-1]**2 + phi[-1]**2)                 # retorna norma en el extremo derecho (residual) # noqa: E261
+def endpoint_norm(eps, x_start, x_end, dx):                  # calcula norma final para una energía eps  
+    xs, psi, phi = integrate_rk4(eps, x_start, x_end, dx)    # integra ecuación de Schrödinger  
+    return np.sqrt(psi[-1]**2 + phi[-1]**2)                 # retorna norma en el extremo derecho (residual)  
 
 # Búsqueda de energías mediante barrido y detección de mínimos locales -------------------
 # parámetros numéricos del barrido
-dx = 0.005                                                  # paso máximo sugerido por el enunciado (<=0.01) # noqa: E261
-eps_min, eps_max = -1.0, 0.0                                # intervalo de energías a explorar (pozo entre -1 y 0) # noqa: E261
-N_eps = 400                                                 # número de energías para barrido inicial (malla fina) # noqa: E261
-eps_grid = np.linspace(eps_min, eps_max, N_eps)             # rejilla de energías para el barrido inicial # noqa: E261
+dx = 0.005                                                  # paso máximo sugerido por el enunciado (<=0.01)  
+eps_min, eps_max = -1.0, 0.0                                # intervalo de energías a explorar (pozo entre -1 y 0)  
+N_eps = 400                                                 # número de energías para barrido inicial (malla fina)  
+eps_grid = np.linspace(eps_min, eps_max, N_eps)             # rejilla de energías para el barrido inicial  
 
-norms = np.zeros_like(eps_grid)                             # vector para almacenar la norma al final para cada eps # noqa: E261
-turns_cache = [None] * len(eps_grid)                        # cache de puntos de giro usados por cada eps # noqa: E261
+norms = np.zeros_like(eps_grid)                             # vector para almacenar la norma al final para cada eps  
+turns_cache = [None] * len(eps_grid)                        # cache de puntos de giro usados por cada eps  
 
-for i, eps in enumerate(eps_grid):                          # bucle sobre energías de prueba # noqa: E261
-    x1, x2 = find_turning_points(eps)                       # encuentra puntos de giro V(x)=eps # noqa: E261
-    x_start = x1 - 2.0                                      # simular desde x1-2 según el enunciado # noqa: E261
-    x_end = x2 + 1.0                                        # hasta x2+1 según el enunciado # noqa: E261
-    turns_cache[i] = (x_start, x_end)                       # guarda para reutilizar soluciones después # noqa: E261
-    norms[i] = endpoint_norm(eps, x_start, x_end, dx)       # calcula y almacena la norma final # noqa: E261
+for i, eps in enumerate(eps_grid):                          # bucle sobre energías de prueba  
+    x1, x2 = find_turning_points(eps)                       # encuentra puntos de giro V(x)=eps  
+    x_start = x1 - 2.0                                      # simular desde x1-2 según el enunciado  
+    x_end = x2 + 1.0                                        # hasta x2+1 según el enunciado  
+    turns_cache[i] = (x_start, x_end)                       # guarda para reutilizar soluciones después  
+    norms[i] = endpoint_norm(eps, x_start, x_end, dx)       # calcula y almacena la norma final  
 
 # detectar mínimos locales en el vector norms ----------------------------------------
-min_idx = argrelextrema(norms, np.less, order=2)[0]         # índices de mínimos locales en el barrido inicial # noqa: E261
+min_idx = argrelextrema(norms, np.less, order=2)[0]         # índices de mínimos locales en el barrido inicial  
 
 # refinar cada mínimo con un optimizador unidimensional (bracket alrededor del mínimo) -
-refined_energies = []                                       # lista para energías refinadas # noqa: E261
-refined_solutions = []                                      # lista para soluciones (xs,psi,phi) # noqa: E261
+refined_energies = []                                       # lista para energías refinadas  
+refined_solutions = []                                      # lista para soluciones (xs,psi,phi)  
 
-for idx in min_idx:                                         # para cada índice de mínimo local # noqa: E261
-    eps0 = eps_grid[idx]                                    # energía inicial para refinamiento # noqa: E261
-    # definir extremo izquierdo y derecho para el bracketing (usando vecinos del grid) # noqa: E261
-    left = eps_grid[max(idx - 3, 0)]                        # energía izquierda para bracketing # noqa: E261
-    right = eps_grid[min(idx + 3, len(eps_grid) - 1)]       # energía derecha para bracketing # noqa: E261
-    x_start, x_end = turns_cache[idx]                       # recupera los límites de integración usados en el barrido # noqa: E261
+for idx in min_idx:                                         # para cada índice de mínimo local  
+    eps0 = eps_grid[idx]                                    # energía inicial para refinamiento  
+    # definir extremo izquierdo y derecho para el bracketing (usando vecinos del grid)  
+    left = eps_grid[max(idx - 3, 0)]                        # energía izquierda para bracketing  
+    right = eps_grid[min(idx + 3, len(eps_grid) - 1)]       # energía derecha para bracketing  
+    x_start, x_end = turns_cache[idx]                       # recupera los límites de integración usados en el barrido  
 
-    res = minimize_scalar(lambda e: endpoint_norm(e, x_start, x_end, dx), bounds=(left, right), method='bounded', options={'xatol':1e-7})  # refina energía por minimización de la norma final # noqa: E501
-    eps_ref = res.x                                         # energía refinada (mínimo local) # noqa: E261
-    refined_energies.append(eps_ref)                        # guarda energía refinada # noqa: E261
+    res = minimize_scalar(lambda e: endpoint_norm(e, x_start, x_end, dx), bounds=(left, right), method='bounded', options={'xatol':1e-7})  # refina energía por minimización de la norma final  
+    eps_ref = res.x                                         # energía refinada (mínimo local)  
+    refined_energies.append(eps_ref)                        # guarda energía refinada  
 
-    # integra nuevamente con la energía refinada para obtener la función de onda completa # noqa: E261
-    xs, psi, phi = integrate_rk4(eps_ref, x_start, x_end, dx)  # integra con eps refinada # noqa: E261
+    # integra nuevamente con la energía refinada para obtener la función de onda completa  
+    xs, psi, phi = integrate_rk4(eps_ref, x_start, x_end, dx)  # integra con eps refinada  
 
-    # normalizar la función de onda en norma L2 (integral psi^2 dx = 1) # noqa: E261
-    # se usa simpson/trapecio numérico para calcular norma y luego se normaliza # noqa: E261
-    norm_psi = np.sqrt(simps(psi**2, xs))                   # calcula norma L2 de psi antes de escalar # noqa: E261
-    if norm_psi > 0:                                        # evita división por cero # noqa: E261
-        psi = psi / norm_psi                                # normaliza psi # noqa: E261
+    # normalizar la función de onda en norma L2 (integral psi^2 dx = 1)  
+    # se usa simpson/trapecio numérico para calcular norma y luego se normaliza  
+    norm_psi = np.sqrt(simps(psi**2, xs))                   # calcula norma L2 de psi antes de escalar  
+    if norm_psi > 0:                                        # evita división por cero  
+        psi = psi / norm_psi                                # normaliza psi  
 
-    refined_solutions.append((xs, psi, phi))                # guarda la solución normalizada # noqa: E261
+    refined_solutions.append((xs, psi, phi))                # guarda la solución normalizada  
 
 
 # ordenar niveles numéricos por energía (ascendente) para emparejarlos correctamente
