@@ -80,7 +80,6 @@ axs_a[2].set_xlabel('t')
 fig_a.tight_layout()
 fig_a.savefig('Taller 3 - ODE/1.a.pdf', dpi=200)
 
-
 # ############################
 # # 1.b Problema de Landau (bloque reemplazado según la imagen corregida)
 # ############################
@@ -267,6 +266,7 @@ axs_c[2].set_ylabel('L_z')
 axs_c[2].set_xlabel('t')
 fig_c.tight_layout()
 fig_c.savefig('Taller 3 - ODE/1.c.pdf', dpi=200)
+
 
 # # Impresión breve indicando que los archivos se generaron (útil en el terminal integrado de VS Code).
 print("Generados: 1.a.pdf, 1.b.pdf, 1.c.pdf")
