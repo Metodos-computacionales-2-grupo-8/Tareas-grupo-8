@@ -118,48 +118,79 @@ plt.savefig("Taller 2 - Fourier/1.b.pdf", bbox_inches="tight", pad_inches=0.1)
 # ---------------------------
 # PARTE C
 # ---------------------------
-# Definir los valores de tmax para analizar cómo afecta el ancho de los picos
-#tmax_values = [0.5, 1, 2, 4]  # Distintas duraciones de la señal
-tmax_values = np.linspace(0.1, 30, 120)  # 10 valores entre 0.1 y 5 segundos
 
-# Lista para guardar los anchos de pico para cada tmax
+def _fwhm_from_spectrum(freqs, mag):
+    peak_idx = np.argmax(mag)
+    peak_val = mag[peak_idx]
+    half = peak_val / 2.0
+
+    # izquierda: buscar cruce hacia la izquierda
+    left = peak_idx
+    while left > 0 and mag[left] > half:
+        left -= 1
+    if left == peak_idx:  # no se encontró (muy raro), tomar primer bin
+        left_freq = freqs[0]
+    else:
+        # interpolación lineal entre left y left+1
+        f1, f2 = freqs[left], freqs[left+1]
+        m1, m2 = mag[left], mag[left+1]
+        if m2 == m1:
+            left_freq = f1
+        else:
+            left_freq = f1 + (half - m1) * (f2 - f1) / (m2 - m1)
+
+    # derecha: buscar cruce hacia la derecha
+    right = peak_idx
+    while right < len(mag)-1 and mag[right] > half:
+        right += 1
+    if right == peak_idx:  # no se encontró
+        right_freq = freqs[-1]
+    else:
+        f1, f2 = freqs[right-1], freqs[right]
+        m1, m2 = mag[right-1], mag[right]
+        if m2 == m1:
+            right_freq = f2
+        else:
+            right_freq = f1 + (half - m1) * (f2 - f1) / (m2 - m1)
+
+    return right_freq - left_freq
+
+# Rango de tmax a analizar
+tmax_values = np.linspace(0.1, 15, 60)
+
 peak_widths = []
 
 for tmax_c in tmax_values:
-    # Generar datos con el tmax actual, manteniendo los otros parámetros fijos
+    # generar señal (usa la versión de generate_data definida anteriormente en el archivo)
     t, y = generate_data(tmax_c, dt, A, freq, noise)
-    
-    # Calcular el espectro de Fourier para la señal generada
-    spectrum = FourierTransform(t, y, freqs)
-    
-    # Encontrar el índice del pico principal (máximo valor absoluto en el espectro)
-    peak_index = np.argmax(np.abs(spectrum))
-    
-    # Calcular el ancho del pico a la mitad de la altura máxima (FWHM)
-    peak_height = np.abs(spectrum[peak_index])
-    half_max = peak_height / 2  # Valor de la mitad de la altura máxima
-    
-    # Buscar los índices donde el espectro cruza la mitad de la altura máxima a la izquierda y derecha del pico
-    left = peak_index
-    while left > 0 and np.abs(spectrum[left]) > half_max:
-        left -= 1
-    right = peak_index
-    while right < len(spectrum)-1 and np.abs(spectrum[right]) > half_max:
-        right += 1
-    
-    # Calcular el ancho del pico en Hz (diferencia de frecuencia entre los cruces)
-    width = freqs[right] - freqs[left]
-    peak_widths.append(width)  # Guardar el ancho calculado
+
+    # calcular espectro con FFT y la rejilla de frecuencias correspondiente
+    N = len(t)
+    if N < 3:
+        peak_widths.append(_np.nan)
+        continue
+    T = t[1] - t[0]  # paso temporal (uniforme aquí)
+    # rfft obtiene sólo la mitad positiva (incluye Nyquist si aplica)
+    spectrum = np.fft.rfft(y)
+    freqs_local = np.fft.rfftfreq(N, d=T)
+    # escalado razonable para comparar magnitudes (mantener consistencia con integrales)
+    spectrum = spectrum * T
+    mag = np.abs(spectrum)
+
+    # calcular FWHM con interpolación lineal para evitar saltos discretos
+    width = _fwhm_from_spectrum(freqs_local, mag)
+    peak_widths.append(width)
 
 # Graficar el ancho de pico vs tmax
 plt.figure(figsize=(7,4))
 plt.plot(tmax_values, peak_widths, marker='o')
-plt.xlabel('Duración de la señal $t_{max}$ (s)')  # Etiqueta del eje x
-plt.ylabel('Ancho de pico (Hz)')                  # Etiqueta del eje y
-plt.title('Ancho de pico vs duración de la señal')# Título del gráfico
+plt.xlabel('Duración de la señal $t_{max}$ (s)')
+plt.ylabel('Ancho de pico (Hz)')
+plt.title('Ancho de pico vs duración de la señal (FWHM estimado por FFT / interpolación)')
 plt.grid(True)
 plt.savefig("Taller 2 - Fourier/1.c.pdf", bbox_inches="tight", pad_inches=0.1)
 #plt.show()
+
 
 # Comentario:
 # El ancho del pico disminuye al aumentar tmax, porque una señal más larga permite una mejor resolución en frecuencia.
